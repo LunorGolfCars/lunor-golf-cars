@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lunor Golf Cars</title>
+<title>Lunor Golf Carts</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, sans-serif; }
@@ -369,7 +369,7 @@ function toggleModel(i) {
 }
 
 // ── Chat IA ──────────────────────────────────────────
-const SYSTEM_PROMPT = `Eres el asistente virtual de Lunor Golf Cars, una empresa mexicana que vende carros de golf eléctricos de alta calidad. Responde siempre en español, de forma amable, concisa y profesional.
+const SYSTEM_PROMPT = `Eres el asistente virtual de Lunor Golf Carts, una empresa mexicana que vende carros de golf eléctricos de alta calidad. Responde siempre en español, de forma amable, concisa y profesional.
 
 Información de los modelos:
 - Lunor E2: Eléctrico, motor 3.5 kW, velocidad máx 25 km/h, autonomía 60 km, 2 pasajeros, carga útil 250 kg. Ideal para campos pequeños y uso residencial.
@@ -386,7 +386,7 @@ function toggleChat() {
   const win = document.getElementById('chat-window');
   win.style.display = chatOpen ? 'flex' : 'none';
   if (chatOpen && chatHistory.length === 0) {
-    addBotMessage('¡Hola! Soy el asistente de Lunor Golf Cars. ¿En qué puedo ayudarte hoy?');
+    addBotMessage('¡Hola! Soy el asistente de Lunor Golf Carts. ¿En qué puedo ayudarte hoy?');
   }
   if (chatOpen) setTimeout(() => document.getElementById('chat-input').focus(), 100);
 }
