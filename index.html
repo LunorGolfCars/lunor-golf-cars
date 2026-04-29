@@ -654,7 +654,7 @@ function smRender() {
   grid.innerHTML = smArticles.map(a => `
     <div class="sm-card">
       ${a.img
-        ? `<img class="sm-card-img foto-galeria" src="${a.img}" alt="${a.title}" onclick="openLightbox('${a.img}')">`
+        ? `<img class="sm-card-img foto-galeria" src="${a.img}" alt="${a.title}" onclick="abrirLightbox('${a.img}')">`
         : `<div class="sm-card-img-placeholder">Sin imagen</div>`}
       <div class="sm-card-body">
         <div class="sm-card-title">${a.title}</div>
