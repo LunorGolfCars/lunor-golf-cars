@@ -721,6 +721,8 @@ function smCancelEdit() {
   document.getElementById('sm-input-desc').value = '';
   document.getElementById('sm-form-title').textContent = 'Nuevo Artículo';
   document.getElementById('sm-img-preview').style.display = 'none';
+  document.getElementById('sm-admin-panel').style.display = 'none';
+  smRender();
 }
 
 function smDelete(id) {
