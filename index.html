@@ -326,7 +326,23 @@
 
 </div>
 
-<script>
+<script type="module">
+// ===== FIREBASE =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBzNKJZe79pm__jte9oM633d-y--Joua1c",
+  authDomain: "lunor-golf-carts.firebaseapp.com",
+  projectId: "lunor-golf-carts",
+  storageBucket: "lunor-golf-carts.firebasestorage.app",
+  messagingSenderId: "40062856158",
+  appId: "1:40062856158:web:90f1bea587d45d6f354b4f"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const smCol = collection(db, 'segunda_mano');
+
 const models = [
   {
     badge: "Eléctrico",
@@ -642,11 +658,17 @@ function toggleAcc(i) {
 
 
 // ===== SEGUNDA MANO =====
-const SM_KEY = 'lunor_segunda_mano';
 const SM_WA = '524432734493';
-let smArticles = JSON.parse(localStorage.getItem(SM_KEY) || '[]');
+let smArticles = [];
 let smEditingId = null;
 let smPendingImageUrl = null;
+
+// Escucha cambios en tiempo real
+onSnapshot(query(smCol, orderBy('createdAt', 'desc')), (snapshot) => {
+  smArticles = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  smRender();
+  smRenderAdminList();
+});
 
 function smRender() {
   const grid = document.getElementById('sm-grid');
@@ -673,10 +695,6 @@ function smRender() {
       </div>
     </div>
   `).join('');
-}
-
-function smSave() {
-  localStorage.setItem(SM_KEY, JSON.stringify(smArticles));
 }
 
 function smAdminAuth() {
@@ -729,32 +747,33 @@ function smCancelEdit() {
   document.getElementById('sm-form-title').textContent = 'Nuevo Artículo';
   document.getElementById('sm-img-preview').style.display = 'none';
   document.getElementById('sm-admin-panel').style.display = 'none';
-  smRender();
 }
 
-function smDelete(id) {
+async function smDelete(id) {
   if (!confirm('¿Eliminar este artículo?')) return;
-  smArticles = smArticles.filter(x => x.id !== id);
-  smSave();
-  smRender();
-  smRenderAdminList();
+  await deleteDoc(doc(db, 'segunda_mano', id));
 }
 
-function smSaveArticle() {
+async function smSaveArticle() {
   const title = document.getElementById('sm-input-title').value.trim();
   const price = document.getElementById('sm-input-price').value.trim();
   const desc  = document.getElementById('sm-input-desc').value.trim();
   if (!title || !price) { alert('El título y el precio son obligatorios.'); return; }
-  if (smEditingId) {
-    const idx = smArticles.findIndex(x => x.id === smEditingId);
-    if (idx !== -1) smArticles[idx] = { id: smEditingId, title, price, desc, img: smPendingImageUrl };
-  } else {
-    smArticles.push({ id: Date.now().toString(), title, price, desc, img: smPendingImageUrl });
+  const btn = document.querySelector('.sm-btn-save');
+  btn.textContent = 'Guardando...';
+  btn.disabled = true;
+  try {
+    if (smEditingId) {
+      await updateDoc(doc(db, 'segunda_mano', smEditingId), { title, price, desc, img: smPendingImageUrl || null });
+    } else {
+      await addDoc(smCol, { title, price, desc, img: smPendingImageUrl || null, createdAt: Date.now() });
+    }
+    smCancelEdit();
+  } catch(e) {
+    alert('Error al guardar. Revisa tu conexión.');
   }
-  smSave();
-  smRender();
-  smRenderAdminList();
-  smCancelEdit();
+  btn.textContent = 'Guardar';
+  btn.disabled = false;
 }
 
 function smUploadPhoto() {
@@ -781,7 +800,14 @@ function smHandleFile(event) {
     .catch(() => { btn.textContent = '⚠ Error al subir. Intenta de nuevo.'; });
 }
 
-smRender();
+// Exponer funciones al scope global (necesario con módulos ES)
+window.smAdminAuth = smAdminAuth;
+window.smStartEdit = smStartEdit;
+window.smDelete = smDelete;
+window.smSaveArticle = smSaveArticle;
+window.smCancelEdit = smCancelEdit;
+window.smUploadPhoto = smUploadPhoto;
+window.smHandleFile = smHandleFile;
 
 </script>
 </body>
