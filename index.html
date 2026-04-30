@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lunor Golf Carts</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, sans-serif; }
@@ -326,11 +328,8 @@
 
 </div>
 
-<script type="module">
+<script>
 // ===== FIREBASE =====
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
-
 const firebaseConfig = {
   apiKey: "AIzaSyBzNKJZe79pm__jte9oM633d-y--Joua1c",
   authDomain: "lunor-golf-carts.firebaseapp.com",
@@ -339,9 +338,9 @@ const firebaseConfig = {
   messagingSenderId: "40062856158",
   appId: "1:40062856158:web:90f1bea587d45d6f354b4f"
 };
-const fbApp = initializeApp(firebaseConfig);
-const db = getFirestore(fbApp);
-const smCol = collection(db, 'segunda_mano');
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const smCol = db.collection('segunda_mano');
 
 const models = [
   {
@@ -664,7 +663,7 @@ let smEditingId = null;
 let smPendingImageUrl = null;
 
 // Escucha cambios en tiempo real
-onSnapshot(query(smCol, orderBy('createdAt', 'desc')), (snapshot) => {
+smCol.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
   smArticles = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   smRender();
   smRenderAdminList();
@@ -751,7 +750,7 @@ function smCancelEdit() {
 
 async function smDelete(id) {
   if (!confirm('¿Eliminar este artículo?')) return;
-  await deleteDoc(doc(db, 'segunda_mano', id));
+  await db.collection('segunda_mano').doc(id).delete();
 }
 
 async function smSaveArticle() {
@@ -764,9 +763,9 @@ async function smSaveArticle() {
   btn.disabled = true;
   try {
     if (smEditingId) {
-      await updateDoc(doc(db, 'segunda_mano', smEditingId), { title, price, desc, img: smPendingImageUrl || null });
+      await db.collection('segunda_mano').doc(smEditingId).update({ title, price, desc, img: smPendingImageUrl || null });
     } else {
-      await addDoc(smCol, { title, price, desc, img: smPendingImageUrl || null, createdAt: Date.now() });
+      await smCol.add({ title, price, desc, img: smPendingImageUrl || null, createdAt: Date.now() });
     }
     smCancelEdit();
   } catch(e) {
@@ -808,15 +807,6 @@ window.smSaveArticle = smSaveArticle;
 window.smCancelEdit = smCancelEdit;
 window.smUploadPhoto = smUploadPhoto;
 window.smHandleFile = smHandleFile;
-window.scroll2 = scroll2;
-window.toggleAcc = toggleAcc;
-window.toggleModel = toggleModel;
-window.toggleChat = toggleChat;
-window.sendMessage = sendMessage;
-window.abrirLightbox = abrirLightbox;
-window.cerrarLightbox = cerrarLightbox;
-window.abrirGaleria = abrirGaleria;
-window.selectCargo = selectCargo;
 
 </script>
 </body>
