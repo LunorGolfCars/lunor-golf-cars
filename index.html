@@ -197,6 +197,7 @@
       <button class="nav-link" onclick="scroll2('datos-tecnicos')">Datos Técnicos</button>
       <button class="nav-link" onclick="scroll2('segunda-mano')">Segunda Mano</button>
       <button class="nav-link" onclick="scroll2('contacto')">Contacto</button>
+      <button class="nav-link" onclick="scroll2('shopping')">Shopping</button>
     </div>
   </nav>
 
@@ -273,6 +274,45 @@
     </div>
   </div>
 
+  <!-- SHOPPING -->
+  <div class="section" id="shopping" style="display:none;opacity:0;transition:opacity 0.3s ease;">
+    <div class="section-label">Tienda</div>
+    <h2 class="section-title">Shopping</h2>
+    <div class="gold-divider"></div>
+    <div class="sm-grid" id="sh-grid"></div>
+    <div id="sh-empty" class="sm-empty" style="display:none;">
+      <p>No hay artículos disponibles por el momento.</p>
+    </div>
+    <button id="sh-admin-toggle" onclick="shAdminAuth()" style="background:none;border:0.5px solid rgba(184,151,90,0.15);border-radius:4px;color:rgba(255,255,255,0.2);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-top:2.5rem;display:block;margin-left:auto;padding:5px 12px;transition:color 0.2s,border-color 0.2s;">Administrar</button>
+    <div id="sh-admin-panel" style="display:none;margin-top:1.5rem;background:#1a1a1a;border:0.5px solid rgba(184,151,90,0.2);border-radius:var(--border-radius-lg);padding:1.5rem;">
+      <p class="sm-admin-title">Panel de Administración — Shopping</p>
+      <div id="sh-article-list" style="margin-bottom:1.5rem;"></div>
+      <p class="sm-admin-title" style="margin-top:1rem;" id="sh-form-title">Nuevo Artículo</p>
+      <div class="sm-field">
+        <label>Título</label>
+        <input type="text" id="sh-input-title" placeholder="Ej. Guantes de golf premium">
+      </div>
+      <div class="sm-field">
+        <label>Precio</label>
+        <input type="text" id="sh-input-price" placeholder="Ej. $850 MXN">
+      </div>
+      <div class="sm-field">
+        <label>Descripción</label>
+        <textarea id="sh-input-desc" placeholder="Material, talla, características..."></textarea>
+      </div>
+      <div class="sm-field">
+        <label>Foto</label>
+        <button class="sm-upload-btn" onclick="shUploadPhoto()" id="sh-upload-btn-label">📷 Subir foto desde tu dispositivo</button>
+        <img id="sh-img-preview" class="sm-img-preview" src="" alt="Vista previa">
+      </div>
+      <div class="sm-admin-btns">
+        <button class="sm-btn-save" onclick="shSaveArticle()">Guardar</button>
+        <button class="sm-btn-cancel" onclick="shCancelEdit()">Cancelar</button>
+      </div>
+      <input type="file" id="sh-file-input" accept="image/*" style="display:none;" onchange="shHandleFile(event)">
+    </div>
+  </div>
+
   <div class="section" id="contacto" style="display:none;opacity:0;transition:opacity 0.3s ease;">
     <div class="contact-box">
       <h2>¿Listo para tu Lunor?</h2>
@@ -341,6 +381,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const smCol = db.collection('segunda_mano');
+const shCol = db.collection('shopping');
 
 const models = [
   {
@@ -607,7 +648,7 @@ function selectCargo(modelo, nombre, desc) {
 }
 
 function scroll2(id) {
-  const sections = ['modelos', 'datos-tecnicos', 'segunda-mano', 'contacto'];
+  const sections = ['modelos', 'datos-tecnicos', 'segunda-mano', 'shopping', 'contacto'];
 
   // Hide all sections first
   sections.forEach(sec => {
@@ -807,6 +848,149 @@ window.smSaveArticle = smSaveArticle;
 window.smCancelEdit = smCancelEdit;
 window.smUploadPhoto = smUploadPhoto;
 window.smHandleFile = smHandleFile;
+
+
+// ===== SHOPPING =====
+const SH_WA = '524432734493';
+let shArticles = [];
+let shEditingId = null;
+let shPendingImageUrl = null;
+
+shCol.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+  shArticles = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  shRender();
+  shRenderAdminList();
+});
+
+function shRender() {
+  const grid = document.getElementById('sh-grid');
+  const empty = document.getElementById('sh-empty');
+  if (!grid) return;
+  if (shArticles.length === 0) {
+    grid.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  grid.innerHTML = shArticles.map(a => `
+    <div class="sm-card">
+      ${a.img
+        ? `<img class="sm-card-img foto-galeria" src="${a.img}" alt="${a.title}" onclick="abrirLightbox('${a.img}')">`
+        : `<div class="sm-card-img-placeholder">Sin imagen</div>`}
+      <div class="sm-card-body">
+        <div class="sm-card-title">${a.title}</div>
+        <div class="sm-card-price">${a.price}</div>
+        <div class="sm-card-desc">${a.desc}</div>
+        <a class="sm-card-btn" href="https://wa.me/${SH_WA}?text=${encodeURIComponent('Hola, me interesa este artículo: ' + a.title + ' — ' + a.price)}" target="_blank" rel="noopener">
+          Contactar por WhatsApp
+        </a>
+      </div>
+    </div>
+  `).join('');
+}
+
+function shAdminAuth() {
+  const panel = document.getElementById('sh-admin-panel');
+  if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+  const pwd = prompt('Contraseña de administrador:');
+  if (pwd === 'lunor2024') {
+    panel.style.display = 'block';
+    shRenderAdminList();
+  } else if (pwd !== null) {
+    alert('Contraseña incorrecta.');
+  }
+}
+
+function shRenderAdminList() {
+  const list = document.getElementById('sh-article-list');
+  if (!list) return;
+  if (shArticles.length === 0) { list.innerHTML = '<p style="font-size:13px;color:var(--color-text-secondary);">No hay artículos.</p>'; return; }
+  list.innerHTML = shArticles.map(a => `
+    <div class="sm-article-admin">
+      <span>${a.title}</span>
+      <div class="sm-article-admin-btns">
+        <button class="sm-btn-edit" onclick="shStartEdit('${a.id}')">Editar</button>
+        <button class="sm-btn-del" onclick="shDelete('${a.id}')">Eliminar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function shStartEdit(id) {
+  const a = shArticles.find(x => x.id === id);
+  if (!a) return;
+  shEditingId = id;
+  shPendingImageUrl = a.img || null;
+  document.getElementById('sh-input-title').value = a.title;
+  document.getElementById('sh-input-price').value = a.price;
+  document.getElementById('sh-input-desc').value = a.desc;
+  document.getElementById('sh-form-title').textContent = 'Editar Artículo';
+  const prev = document.getElementById('sh-img-preview');
+  if (a.img) { prev.src = a.img; prev.style.display = 'block'; }
+  else { prev.style.display = 'none'; }
+}
+
+function shCancelEdit() {
+  shEditingId = null;
+  shPendingImageUrl = null;
+  document.getElementById('sh-input-title').value = '';
+  document.getElementById('sh-input-price').value = '';
+  document.getElementById('sh-input-desc').value = '';
+  document.getElementById('sh-form-title').textContent = 'Nuevo Artículo';
+  document.getElementById('sh-img-preview').style.display = 'none';
+  document.getElementById('sh-admin-panel').style.display = 'none';
+}
+
+async function shDelete(id) {
+  if (!confirm('¿Eliminar este artículo?')) return;
+  await db.collection('shopping').doc(id).delete();
+}
+
+async function shSaveArticle() {
+  const title = document.getElementById('sh-input-title').value.trim();
+  const price = document.getElementById('sh-input-price').value.trim();
+  const desc  = document.getElementById('sh-input-desc').value.trim();
+  if (!title || !price) { alert('El título y el precio son obligatorios.'); return; }
+  const btn = document.querySelector('#sh-admin-panel .sm-btn-save');
+  btn.textContent = 'Guardando...';
+  btn.disabled = true;
+  try {
+    if (shEditingId) {
+      await db.collection('shopping').doc(shEditingId).update({ title, price, desc, img: shPendingImageUrl || null });
+    } else {
+      await shCol.add({ title, price, desc, img: shPendingImageUrl || null, createdAt: Date.now() });
+    }
+    shCancelEdit();
+  } catch(e) {
+    alert('Error al guardar. Revisa tu conexión.');
+  }
+  btn.textContent = 'Guardar';
+  btn.disabled = false;
+}
+
+function shUploadPhoto() {
+  document.getElementById('sh-file-input').click();
+}
+
+function shHandleFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const btn = document.getElementById('sh-upload-btn-label');
+  btn.textContent = 'Subiendo...';
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', 'lunor_segundamano');
+  fetch('https://api.cloudinary.com/v1_1/dwbi1r4aw/image/upload', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+      shPendingImageUrl = data.secure_url;
+      const prev = document.getElementById('sh-img-preview');
+      prev.src = shPendingImageUrl;
+      prev.style.display = 'block';
+      btn.textContent = '✓ Foto cargada — cambiar foto';
+    })
+    .catch(() => { btn.textContent = '⚠ Error al subir. Intenta de nuevo.'; });
+}
 
 </script>
 </body>
